@@ -23,19 +23,27 @@ from zope.annotation.interfaces import IAnnotations
 from BTrees.OOBTree import OOBTree
 from Products.CMFCore.utils import getToolByName
 from collective.filepreviewbehavior.interfaces import IPreviewable
+from collective.filepreviewbehavior.interfaces import IPreviewAware
 from plone.dexterity.interfaces import IDexterityContent
-
+from zope.component import adapter
+from zope.interface import implementer
+from zope.interface import provider
+from zope.event import notify
 
 from collective.filepreviewbehavior import interfaces
 from plone.app.contenttypes.interfaces import IFile
+from emc.bokeh.utils import PyfileAddedEvent
 
 LOG = logging.getLogger('collective.filepreviewbehavior')
 
-class ToPreviewableObject(grok.Adapter):
-    grok.implements( IPreviewable )
-    grok.context( IDexterityContent )
+@implementer(IPreviewable)
+@adapter(IDexterityContent)
+class ToPreviewableObject(object):
+# class ToPreviewableObject(grok.Adapter):
+#     grok.implements(IPreviewable  )
+#     grok.context( IDexterityContent )
 
-
+    _re_imgsrc = re.compile('<[iI][mM][gG]([^>]*) [sS][rR][cC]="([^">]*)"([^>]*)>')
     class _replacer(object):
         
         def __init__( self, sublist, instance ):
@@ -60,12 +68,7 @@ class ToPreviewableObject(grok.Adapter):
             return result
 
 
-    def getPrimaryField( self ):
-        for schema in iterSchemata( self.context ):
-            for name, field in getFieldsInOrder( schema ):
-                if IPrimaryField.providedBy( field ):
-                    return field
-        return None
+
     
     def __init__(self, context):
         self.key         = 'htmlpreview'
@@ -75,6 +78,8 @@ class ToPreviewableObject(grok.Adapter):
             self.annotations[self.key] = OOBTree()
         if not self.annotations[self.key].get('html', None):
             self.annotations[self.key]['html'] = ""
+        if not self.annotations[self.key].get('filetype', None):
+            self.annotations[self.key]['filetype'] = ""            
         if not self.annotations[self.key].get('subobjects', None):
             self.annotations[self.key]['subobjects'] = OOBTree()
     
@@ -83,13 +88,31 @@ class ToPreviewableObject(grok.Adapter):
     
     def setPreview(self, preview):
         self.annotations[self.key]['html'] = preview
-        self.context.reindexObject()
+#         self.context.reindexObject()
 
+#         if self.context.portal_type == "emc.bokeh.codefile":
+#             notify(PyfileAddedEvent(self.context))
+        
+
+    def getPrimaryField( self ):
+        for schema in iterSchemata( self.context ):
+            for name, field in getFieldsInOrder( schema ):
+                if IPrimaryField.providedBy( field ):
+                    return field
+        return None
+
+    def getFileType( self, defaulttype='text/plain' ):
+        type = self.annotations[self.key]['filetype']
+        if type=="":
+            return defaulttype
+        else:
+            return type    
+        
     def getPreview( self, mimetype='text/html' ):
         data = self.annotations[self.key]['html']
         if mimetype != 'text/html' and data:
             transforms = getToolByName( self.context, 'portal_transforms' )
-            primary = self.getPreview()
+            primary = self.getPrimaryField()
             filename = primary.get( self.context ).filename + '.html'
             return str( transforms.convertTo( mimetype, data.encode('utf8'),
                                               mimetype = 'text/html',
@@ -98,6 +121,7 @@ class ToPreviewableObject(grok.Adapter):
         return data
 
     def setSubObject(self, name, data):
+
         mtr = self.context.mimetypes_registry
         mime = mtr.classify(data, filename=name)
         mime = str(mime) or 'application/octet-stream'
@@ -119,6 +143,9 @@ class ToPreviewableObject(grok.Adapter):
         file = self.getPrimaryField().get( self.context )
         data = None
         if file:
+            filetype = file.contentType
+            if  bool(filetype):
+                self.annotations[self.key]['filetype'] = filetype
             try:
                 data = transforms.convertTo('text/html', file.data, filename=file.filename)
             except MissingBinary, e:
@@ -143,6 +170,66 @@ class ToPreviewableObject(grok.Adapter):
         #store the html in the HTMLPreview field for preview
         self.setPreview(html_converted.decode('utf-8', "replace"))
         self.context.reindexObject()
+
+
+    def UpdateFileInfo(self):
+        self.clearSubObjects()
+        transforms = getToolByName(self.context, 'portal_transforms')
+        # -- get the primary field the dexterity way
+        file = self.getPrimaryField().get( self.context )
+        data = None
+        if file:
+
+            filetype = self.annotations[self.key]['filetype']
+            file.contentType = filetype
+            try:
+                data = transforms.convertTo('text/html', file.data, filename=file.filename)
+            except MissingBinary, e:
+                LOG.error(str(e))
+        
+        if data is None:
+            self.setPreview(u"")
+            return
+        
+        #get the html code
+        html_converted = data.getData()
+        #update internal links
+        #remove bad character '\xef\x81\xac' from HTMLPreview
+        html_converted = re.sub('\xef\x81\xac', "", html_converted)
+        # patch image sources since html base is that of our parent
+        subobjs = data.getSubObjects()
+        if len(subobjs)>0:
+            for id, data in subobjs.items():
+                self.setSubObject(id, data)
+            html_converted = self._re_imgsrc.sub(self._replacer(subobjs.keys(), self.context), html_converted)
+        #store the html in the HTMLPreview field for preview
+        self.setPreview(html_converted.decode('utf-8', "replace"))
+        self.context.reindexObject()
+
+##  use dexteritytextindexer to build searchableText indexer
+# from collective import dexteritytextindexer
+# from zope.component import adapts
+# from zope.interface import implements
+# 
+# class FileContentSearchableTextExtender(object):
+#     adapts(IPreviewAware)
+#     implements(dexteritytextindexer.IDynamicTextIndexExtender)
+# 
+#     def __init__(self, context):
+#         self.context = context
+# 
+#     def __call__(self):
+#         """Extend the searchable text with file content"""
+#         object = self.context
+#         data = object.SearchableText()
+#         try:
+#             obj = IPreviewable(object)
+#             preview = obj.getPreview(mimetype="text/plain")
+#             return " ".join([data, preview.encode('utf-8')])
+#         except:
+#             return data
+        
+
 
 def previewIndexWrapper(object, portal, **kwargs):
     data = object.SearchableText()

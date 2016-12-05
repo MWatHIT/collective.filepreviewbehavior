@@ -22,7 +22,11 @@ from zope.interface import implements,Interface
 from zope.component import provideAdapter,adapts,queryUtility
 from collective.filepreviewbehavior.interfaces import IPreviewable
 from plone.dexterity.interfaces import IDexterityContent
+from collective.filepreviewbehavior.tests.test_file import getFile
 
+from zope import event
+from zope.lifecycleevent import ObjectCreatedEvent
+from plone.namedfile.file import NamedBlobFile
 # assign the behavior to content type
 class AssignRoles(object):
     
@@ -30,7 +34,7 @@ class AssignRoles(object):
 #     adapts(Interface)
     adapts(IFile)    
 #     adapts(IProject)    
-    enabled = [IPreviewAware]
+    enabled = [IPreviewable]
 
     def __init__(self, context):
         self.context = context
@@ -57,7 +61,23 @@ class Testpreviewbehavior(unittest.TestCase):
         transaction.commit()
         self.assertTrue(IPreviewable(portal['file1']).key == "htmlpreview")
 
+    def test_build_preview(self):
+        portal = self.layer['portal']
+        app = self.layer['app']
+        setRoles(portal, TEST_USER_ID, ('Manager',))             
+        provideAdapter(AssignRoles)
+#         data = getFile('file.doc').read()
+        import pdb
+        pdb.set_trace() 
+        portal.invokeFactory('File','file1')
+        file = portal['file1']
+#         file.file = NamedBlobFile(data, 'application/msword', 'file.doc')
+        event.notify(ObjectCreatedEvent(file))
+        
 
+        import transaction
+        transaction.commit()
+        self.assertTrue(IPreviewable(portal['file1']).key == "htmlpreview")  
       
 
 

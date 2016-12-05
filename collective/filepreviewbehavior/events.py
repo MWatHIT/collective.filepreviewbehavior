@@ -30,11 +30,18 @@ __author__ = """Jean-Nicolas Bès <contact@atreal.net>"""
 __docformat__ = 'plaintext'
 __licence__ = 'GPL'
 
-from Acquisition import aq_base
 
+from zope.interface import implements
+from zope.component.interfaces import ObjectEvent
 from collective.filepreviewbehavior.interfaces import IPreviewable
+from collective.filepreviewbehavior.interfaces import IPreviewableFileCreatedEvent
 
+class PreviewableFileCreatedEvent(ObjectEvent):
+    """An previewable file  has been created"""
 
+    implements(IPreviewableFileCreatedEvent)
+
+# @grok.subscribe(IPreviewable,IObjectAddedEvent)
 def buildAndStorePreview(obj, event):
     """ """
     if hasattr(obj,'buildPreview'):
@@ -43,3 +50,10 @@ def buildAndStorePreview(obj, event):
             return
     print "BUILD AND STORE PREVIEW %s" % ( obj.getPhysicalPath() , )
     IPreviewable(obj).buildAndStorePreview()
+
+def UpdateFileInfo(obj, event):
+    """ """
+    print "Update file information %s" % ( obj.getPhysicalPath() , )
+    IPreviewable(obj).UpdateFileInfo()    
+
+        

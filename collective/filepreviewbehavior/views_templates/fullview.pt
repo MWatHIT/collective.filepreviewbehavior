@@ -1,8 +1,0 @@
-<html>
-  <head>
-    <title tal:content="context/Title"></title>
-    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
-    <base tal:attributes="href context/absolute_url" />
-  </head>
-  <body tal:content="structure context/@@preview_provider/getPreview" />
-</html>

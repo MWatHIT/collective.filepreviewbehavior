@@ -33,6 +33,7 @@ setup(name='collective.filepreviewbehavior',
         'plone.directives.dexterity',
         'plone.rfc822',
         'zope.schema',
+        'collective.dexteritytextindexer',
         # -*- Extra requirements: -*-
         ],
       extras_require={

@@ -12,10 +12,12 @@ class Fixture(PloneSandboxLayer):
     def setUpZope(self, app, configurationContext):
         import plone.app.contenttypes
         import plone.dexterity
+        import collective.filepreviewbehavior
 #         import plone.app.versioningbehavior
 #         import Products.CMFPlacefulWorkflow
         self.loadZCML(package=plone.app.contenttypes)
         self.loadZCML(package=plone.dexterity)
+        self.loadZCML(package=collective.filepreviewbehavior)
 
 #         z2.installProduct(app, 'Products.CMFPlacefulWorkflow')
 

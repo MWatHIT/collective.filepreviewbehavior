@@ -39,14 +39,14 @@ IBehaviorAssignable adapter to mark the behavior as enabled.
     >>> from plone.app.contenttypes.interfaces import IFile
 
     >>> from plone.behavior.interfaces import IBehaviorAssignable
-    >>> from collective.filepreviewbehavior.interfaces import IPreviewAware
+    >>> from collective.filepreviewbehavior.interfaces import IPreviewAware,IPreviewable
     >>> from zope.component import adapts
     >>> from zope.interface import implements
     >>> class TestingAssignable(object):
     ...     implements(IBehaviorAssignable)
     ...     adapts(IFile)
     ...     
-    ...     enabled = [IPreviewAware]
+    ...     enabled = [IPreviewable]
     ...     
     ...     def __init__(self, context):
     ...         self.context = context
@@ -69,9 +69,9 @@ is loaded.
 
     >>> from zope.component import getUtility
     >>> from plone.behavior.interfaces import IBehavior
-    >>> tags_behavior = getUtility(IBehavior, name='collective.filepreviewbehavior.interfaces.IPreviewAware')
+    >>> tags_behavior = getUtility(IBehavior, name='collective.filepreviewbehavior.interfaces.IPreviewable')
     >>> tags_behavior.interface
-    <InterfaceClass collective.filepreviewbehavior.interfaces.IPreviewAware>
+    <InterfaceClass collective.filepreviewbehavior.interfaces.IPreviewable>
 
 
 
@@ -82,19 +82,9 @@ Let's create a content object that has this behavior enabled and check that
 it works.
 
     >>> doc = File('doc')
-    >>> tags_adapter = IPreviewAware(doc, None)
+    >>> tags_adapter = IPreviewable(doc, None)
     >>> tags_adapter is not None
     True
 
 We'll check that the `tags` set is built from the `Subject()` field:
 
-    >>> doc.setSubject(['One', 'Two'])
-    >>> doc.Subject()
-    ('One', 'Two')
-    
-    >>> tags_adapter.tags == set(['One', 'Two'])
-    True
-    
-    >>> tags_adapter.tags = set(['Two', 'Three'])
-    >>> doc.Subject() == ('Two', 'Three')
-    True

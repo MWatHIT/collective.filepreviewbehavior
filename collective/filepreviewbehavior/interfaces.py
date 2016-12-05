@@ -1,5 +1,11 @@
 from zope.interface import Interface
+from zope.lifecycleevent.interfaces import IObjectCreatedEvent
+import zope.component.interfaces
 
+class IPreviewableFileCreatedEvent(zope.component.interfaces.IObjectEvent):
+    """
+    send the event after a previewable file has been created 
+    """
 class IPreviewAware( Interface ):
     """ marker interface , Behavior for enabling Products.ARFilePreview support for dexterity
         content types

@@ -10,13 +10,13 @@ import unittest
 def test_suite():
     suite = unittest.TestSuite()
     suite.addTests([
-        layered(
-            doctest.DocFileSuite(
-                'doctest_behavior.txt',
-                optionflags=doctest.ELLIPSIS
-            ),
-            layer=FUNCTIONAL_TESTING
-        ),
+#         layered(
+#             doctest.DocFileSuite(
+#                 'doctest_behavior.txt',
+#                 optionflags=doctest.ELLIPSIS
+#             ),
+#             layer=FUNCTIONAL_TESTING
+#         ),
         layered(
             doctest.DocFileSuite(
                 'behaviors.txt',
